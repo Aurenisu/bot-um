@@ -1,16 +1,18 @@
 import discord
 from discord.ext import commands
+import os
 
 intents = discord.Intents.default()
 intents.message_content = True
-bot = commands.Bot(command_prefix='!', intents=intents)
+
+bot = commands.Bot(command_name="!", intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f'BAŞARDIK! {bot.user} şu an çevrimiçi!')
+    print(f'Bot {lolibot} olarak giriş yaptı!')
 
 @bot.command()
 async def selam(ctx):
-    await ctx.send('Selam! Sonunda beni calistirmayi basardin!')
+    await ctx.send('Selam kardeşim, botun artık 7/24 aktif!')
 
-bot.run('MTQ4NzgxNzA2MDUzMTgzMDk1NQ.Gic61K.SEGo6g9Wa6tPgCAJ-ppDl-MUpqWp06N-YL_jFI')
+bot.run(os.getenv('D
