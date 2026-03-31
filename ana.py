@@ -10,7 +10,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# --- 2. MÜZİK MOTORU AYARLARI ---
+# --- 2. MÜZİK MOTORU AYARLARI (HATASIZ) ---
 YTDL_OPTIONS = {
     'format': 'bestaudio/best',
     'noplaylist': True,
@@ -18,14 +18,14 @@ YTDL_OPTIONS = {
     'no_warnings': True,
     'default_search': 'ytsearch',
     'nocheckcertificate': True,
-    'cookiefile': 'cookies.txt', 
-    # Burası önemli: YouTube'un bot olduğunu anlamaması için 'kimlik' ekliyoruz
+    'cookiefile': 'cookies.txt',
+    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
     'http_headers': {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-us,en;q=0.5',
         'Sec-Fetch-Mode': 'navigate',
     }
+} # <-- Parantez burada kapandı!
 
 FFMPEG_OPTIONS = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
@@ -55,12 +55,11 @@ async def cal(interaction: discord.Interaction, sarki: str):
 
     try:
         loop = asyncio.get_event_loop()
-        # "List index out of range" hatasını önlemek için kontrol eklendi
         search_query = f"ytsearch1:{sarki}"
         data = await loop.run_in_executor(None, lambda: ytdl.extract_info(search_query, download=False))
         
         if not data or 'entries' not in data or len(data['entries']) == 0:
-            return await interaction.followup.send("❌ Şarkı bulunamadı veya YouTube aramayı engelledi. Lütfen tekrar dene.")
+            return await interaction.followup.send("❌ Şarkı bulunamadı veya YouTube engelledi.")
 
         entry = data['entries'][0]
         url = entry['url']
@@ -76,7 +75,7 @@ async def cal(interaction: discord.Interaction, sarki: str):
         
     except Exception as e:
         print(f"Oynatma Hatası: {e}")
-        await interaction.followup.send(f"❌ Bir hata oluştu: {str(e)[:100]}...")
+        await interaction.followup.send(f"❌ Hata: {str(e)[:100]}")
 
 # --- 4. /ayril KOMUTU ---
 @bot.tree.command(name="ayril", description="Botu kanaldan çıkarır")
