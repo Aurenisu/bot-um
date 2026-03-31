@@ -25,10 +25,12 @@ def veri_kaydet(data):
 
 @bot.event
 async def on_ready():
+    # Komutları Discord'un kafasına vura vura yüklüyoruz
     await bot.tree.sync()
-    print(f"✅ SİSTEM GÜNCELLENDİ: {bot.user} | Log, Yazı-Tura ve BOM Hazır!")
+    print(f"✅ SİSTEM TAMAMLANDI: {bot.user}")
+    print("🚀 AKTİF KOMUTLAR: Puan, Kayıt, Sıralama, Aşk, DC, 8Ball, Yazı-Tura, Müzik, Temizle, Log, BOM")
 
-# --- 2. GELİŞMİŞ LOG SİSTEMİ ---
+# --- 2. LOG SİSTEMİ (SİLME VE DÜZENLEME) ---
 @bot.event
 async def on_message_delete(message):
     if message.author.bot: return
@@ -37,7 +39,7 @@ async def on_message_delete(message):
         embed = discord.Embed(title="🗑️ Mesaj Silindi", color=discord.Color.red(), timestamp=datetime.now())
         embed.add_field(name="Kullanıcı:", value=message.author.mention)
         embed.add_field(name="Kanal:", value=message.channel.mention)
-        embed.add_field(name="Silinen İçerik:", value=message.content or "İçerik yok (Görsel olabilir)", inline=False)
+        embed.add_field(name="İçerik:", value=message.content or "İçerik boş", inline=False)
         await channel.send(embed=embed)
 
 @bot.event
@@ -47,11 +49,11 @@ async def on_message_edit(before, after):
     if channel:
         embed = discord.Embed(title="📝 Mesaj Düzenlendi", color=discord.Color.orange(), timestamp=datetime.now())
         embed.add_field(name="Kullanıcı:", value=before.author.mention)
-        embed.add_field(name="Eski Mesaj:", value=before.content, inline=False)
-        embed.add_field(name="Yeni Mesaj:", value=after.content, inline=False)
+        embed.add_field(name="Eski:", value=before.content, inline=False)
+        embed.add_field(name="Yeni:", value=after.content, inline=False)
         await channel.send(embed=embed)
 
-# --- 3. BOM OYUNU VE PUAN SİSTEMİ ---
+# --- 3. BOM VE PUAN SİSTEMİ (ON_MESSAGE) ---
 @bot.event
 async def on_message(message):
     global bom_sayi, son_kisi
@@ -62,7 +64,7 @@ async def on_message(message):
     uid = str(message.author.id)
     if uid not in data["kullanicilar"]: data["kullanicilar"][uid] = {"isim": message.author.name, "puan": 0}
 
-    # BOM Mantığı
+    # BOM OYUNU
     if content == "bom" or content.isdigit():
         is_bom_turn = (bom_sayi % 5 == 0)
         success = (is_bom_turn and content == "bom") or (not is_bom_turn and content.isdigit() and int(content) == bom_sayi)
@@ -70,8 +72,8 @@ async def on_message(message):
         if success:
             if message.author.id == son_kisi:
                 await message.add_reaction("❌")
-                await message.channel.send("⚠️ Sırayı bozdun! Oyun 1'e döndü.")
                 bom_sayi, son_kisi = 1, None
+                await message.channel.send("⚠️ Sırayı bozdun! Oyun 1'den başlıyor.")
             else:
                 await message.add_reaction("✅")
                 bom_sayi += 1
@@ -91,12 +93,7 @@ async def on_message(message):
 
     await bot.process_commands(message)
 
-# --- 4. TÜM KOMUTLAR (YAZI TURA DAHİL) ---
-
-@bot.tree.command(name="yazi_tura", description="Yazı mı tura mı?")
-async def yazi_tura(interaction: discord.Interaction):
-    sonuc = random.choice(["Yazı", "Tura"])
-    await interaction.response.send_message(f"🪙 Parayı fırlattım... **{sonuc}** geldi!")
+# --- 4. TÜM SLASH KOMUTLARI ---
 
 @bot.tree.command(name="puan", description="Puanını gösterir")
 async def puan(interaction: discord.Interaction):
@@ -126,12 +123,17 @@ async def ask(interaction: discord.Interaction, uye: discord.Member):
 
 @bot.tree.command(name="dc", description="Doğruluk mu Cesaretlik mi?")
 async def dc(interaction: discord.Interaction):
-    soru = random.choice(["D: En büyük korkun ne?", "C: Rastgele birine mesaj at!", "D: Hiç yalan söyledin mi?"])
+    soru = random.choice(["D: En sevdiğin yayıncı kim?", "C: Birine 'Seni çok seviyorum' yaz!", "D: Hiç rezil oldun mu?"])
     await interaction.response.send_message(f"🎲 {soru}")
 
 @bot.tree.command(name="8ball", description="Sihirli 8-Ball")
 async def eightball(interaction: discord.Interaction, soru: str):
-    await interaction.response.send_message(f"🔮 **Soru:** {soru}\n**Cevap:** {random.choice(['Evet', 'Hayır', 'Belki', 'Kesinlikle!'])}")
+    await interaction.response.send_message(f"🔮 **Soru:** {soru}\n**Cevap:** {random.choice(['Evet', 'Hayır', 'Belki', 'İmkansız', 'Kesinlikle!'])}")
+
+@bot.tree.command(name="yazi_tura", description="Yazı mı tura mı?")
+async def yazi_tura(interaction: discord.Interaction):
+    sonuc = random.choice(["Yazı", "Tura"])
+    await interaction.response.send_message(f"🪙 **{sonuc}** geldi!")
 
 @bot.tree.command(name="cal", description="Müzik çalar")
 async def cal(interaction: discord.Interaction, sarki: str):
