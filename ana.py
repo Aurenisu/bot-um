@@ -4,6 +4,7 @@ import os
 import yt_dlp
 import asyncio
 
+# Botun yetkilerini (duyularını) açıyoruz
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
@@ -27,7 +28,7 @@ ytdl = yt_dlp.YoutubeDL(YTDL_OPTIONS)
 
 @bot.event
 async def on_ready():
-    print(f'Bot {lolibot} olarak giriş yaptı ve müzik çalmaya hazır!')
+    print(f'Bot {bot.user} olarak giriş yaptı ve müzik çalmaya hazır!')
 
 @bot.command()
 async def katil(ctx):
@@ -60,6 +61,12 @@ async def dur(ctx):
 
 @bot.command()
 async def ayril(ctx):
+    if ctx.voice_client:
+        await ctx.voice_client.disconnect()
+        await ctx.send("Görüşürüz, ben kaçtım! 👋")
+
+# Railway'deki Token'ı çekiyoruz
+bot.run(os.getenv('DISCORD_TOKEN')):
     if ctx.voice_client:
         await ctx.voice_client.disconnect()
         await ctx.send("Görüşürüz, ben kaçtım! 👋")
