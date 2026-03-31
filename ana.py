@@ -15,6 +15,7 @@ son_kisi = None
 
 # YouTube Ayarları (Müzik için en stabil ayarlar)
 YDL_OPTIONS = {
+    'cookiefile': 'cookies.txt',
     'format': 'bestaudio/best',
     'noplaylist': True,
     'quiet': True,
