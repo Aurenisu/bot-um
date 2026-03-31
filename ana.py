@@ -11,9 +11,15 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # 2. Müzik Motoru Ayarları
-YTDL_OPTIONS = {'format': 'bestaudio/best', 'noplaylist': True, 'quiet': True}
-FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
-ytdl = yt_dlp.YoutubeDL(YTDL_OPTIONS)
+YTDL_OPTIONS = {
+    'format': 'bestaudio/best',
+    'noplaylist': True,
+    'quiet': True,
+    'cookiefile': 'cookies.txt',  # Burayı ekledik
+    'no_warnings': True,
+    'default_search': 'auto',
+    'source_address': '0.0.0.0'
+}
 
 @bot.event
 async def on_ready():
