@@ -8,11 +8,14 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Müzik indirme ayarları
+# Müzik indirme ve oynatma ayarları
 YTDL_OPTIONS = {
     'format': 'bestaudio/best',
     'noplaylist': True,
     'quiet': True,
+    'no_warnings': True,
+    'default_search': 'auto',
+    'source_address': '0.0.0.0'
 }
 
 FFMPEG_OPTIONS = {
@@ -22,29 +25,43 @@ FFMPEG_OPTIONS = {
 
 ytdl = yt_dlp.YoutubeDL(YTDL_OPTIONS)
 
+@bot.event
+async def on_ready():
+    print(f'Bot {lolibot} olarak giriş yaptı ve müzik çalmaya hazır!')
+
 @bot.command()
 async def katil(ctx):
     if ctx.author.voice:
         channel = ctx.author.voice.channel
         await channel.connect()
-        await ctx.send("Geldim kardeşim, ne çalıyoruz?")
+        await ctx.send("Geldim! Ne çalıyoruz?")
     else:
-        await ctx.send("Önce bir ses kanalına girmen lazım!")
+        await ctx.send("Önce bir ses kanalına girmen lazım kardeşim!")
 
 @bot.command()
 async def cal(ctx, *, search):
+    if not ctx.voice_client:
+        await ctx.invoke(katil)
+    
     async with ctx.typing():
-        # YouTube'da arama yapar veya linki açar
+        # YouTube'da arama yapıyoruz
         info = ytdl.extract_info(f"ytsearch:{search}", download=False)['entries'][0]
         url = info['url']
         source = await discord.FFmpegOpusAudio.from_probe(url, **FFMPEG_OPTIONS)
         ctx.voice_client.play(source)
-    await ctx.send(f"Şu an çalıyor: **{info['title']}**")
+    
+    await ctx.send(f"Şu an çalıyor: **{info['title']}** 🎵")
+
+@bot.command()
+async def dur(ctx):
+    if ctx.voice_client:
+        ctx.voice_client.stop()
+        await ctx.send("Müzik durduruldu. 🛑")
 
 @bot.command()
 async def ayril(ctx):
     if ctx.voice_client:
         await ctx.voice_client.disconnect()
-        await ctx.send("Ben kaçar, görüşürüz!")
+        await ctx.send("Görüşürüz, ben kaçtım! 👋")
 
 bot.run(os.getenv('DISCORD_TOKEN'))
