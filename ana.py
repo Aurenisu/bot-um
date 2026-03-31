@@ -40,7 +40,7 @@ async def cal(interaction: discord.Interaction, sarki: str):
 
     # Şarkıyı bulma
     loop = asyncio.get_event_loop()
-    data = await loop.run_in_executor(None, lambda: ytdl.extract_info(sarki, download=False))
+    data = await loop.run_in_executor(None, lambda: ytdl.extract_info(f"ytsearch:{sarki}", download=False))
     
     if 'entries' in data:
         data = data['entries'][0]
