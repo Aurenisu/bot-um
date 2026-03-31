@@ -15,10 +15,12 @@ YTDL_OPTIONS = {
     'format': 'bestaudio/best',
     'noplaylist': True,
     'quiet': True,
-    'cookiefile': 'cookies.txt',  # Yüklediğin bilet burada devreye giriyor
+    'cookiefile': './cookies.txt',  # Başına ./ ekleyerek "tam burada" dedik
     'no_warnings': True,
-    'default_search': 'auto',
-    'source_address': '0.0.0.0'
+    'default_search': 'ytsearch',
+    'nocheckcertificate': True,
+    # YouTube'u kandırmak için gerçek bir tarayıcı gibi davranıyoruz:
+    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 }
 
 FFMPEG_OPTIONS = {
