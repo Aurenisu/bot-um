@@ -1,21 +1,21 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
+import os
 import yt_dlp
 import asyncio
-import os
 
-# 1. BOT AYARLARI
+# --- 1. BOT AYARLARI VE YETKİLER ---
 intents = discord.Intents.default()
-intents.message_content = True
+intents.message_content = True  # Mesajları okuma yetkisi
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# 2. MÜZİK MOTORU AYARLARI
+# --- 2. MÜZİK MOTORU AYARLARI (GÜNCEL) ---
 YTDL_OPTIONS = {
     'format': 'bestaudio/best',
     'noplaylist': True,
     'quiet': True,
-    'cookiefile': 'cookies.txt',  # cookies.txt dosyan GitHub'da olmalı!
+    'cookiefile': 'cookies.txt',  # GitHub'da cookies.txt dosyan olmalı!
     'no_warnings': True,
     'default_search': 'ytsearch',
     'nocheckcertificate': True,
@@ -31,26 +31,30 @@ ytdl = yt_dlp.YoutubeDL(YTDL_OPTIONS)
 
 @bot.event
 async def on_ready():
-    # Slash komutlarını Discord'a tanıtır
-    await bot.tree.sync()
-    print(f"✅ BOT HAZIR: {bot.user} olarak giriş yapıldı!")
+    # Slash komutlarını senkronize et
+    try:
+        await bot.tree.sync()
+        print(f"✅ BOT AKTİF: {bot.user}")
+    except Exception as e:
+        print(f"Senkronizasyon Hatası: {e}")
 
-# 3. OYNATMA KOMUTU (/cal)
-@bot.tree.command(name="cal", description="İstediğin şarkıyı çalar")
+# --- 3. /cal KOMUTU ---
+@bot.tree.command(name="cal", description="Şarkı çalmaya başlar")
+@app_commands.describe(sarki="Şarkı adı veya YouTube linki")
 async def cal(interaction: discord.Interaction, sarki: str):
-    await interaction.response.defer()
+    await interaction.response.defer() # Bot 'düşünüyor' moduna girer
     
-    # Ses kanalı kontrolü
+    # Kullanıcı ses kanalında mı?
     if not interaction.user.voice:
-        return await interaction.followup.send("⚠️ Önce bir ses kanalına girmen lazım!")
-    
-    # Kanala bağlanma
+        return await interaction.followup.send("⚠️ Önce bir ses kanalına girmelisin!")
+
+    # Kanala bağlan
     if not interaction.guild.voice_client:
         await interaction.user.voice.channel.connect()
 
     try:
         loop = asyncio.get_event_loop()
-        # YouTube'da arama yap
+        # YouTube'da ara
         data = await loop.run_in_executor(None, lambda: ytdl.extract_info(f"ytsearch:{sarki}", download=False))
         
         if 'entries' in data:
@@ -59,7 +63,7 @@ async def cal(interaction: discord.Interaction, sarki: str):
         url = data['url']
         source = await discord.FFmpegOpusAudio.from_probe(url, **FFMPEG_OPTIONS)
         
-        # Eğer zaten bir şey çalıyorsa durdur
+        # Zaten çalıyorsa durdur ve yenisini aç
         if interaction.guild.voice_client.is_playing():
             interaction.guild.voice_client.stop()
 
@@ -67,11 +71,11 @@ async def cal(interaction: discord.Interaction, sarki: str):
         await interaction.followup.send(f"🎵 Şu an çalıyor: **{data['title']}**")
         
     except Exception as e:
-        print(f"Hata: {e}")
-        await interaction.followup.send(f"❌ Bir hata oluştu: {e}")
+        print(f"Oynatma Hatası: {e}")
+        await interaction.followup.send(f"❌ Bir hata oluştu (Muhtemelen YouTube engeli): {e}")
 
-# 4. AYRILMA KOMUTU (/ayril)
-@bot.tree.command(name="ayril", description="Bottan kurtulmanı sağlar")
+# --- 4. /ayril KOMUTU ---
+@bot.tree.command(name="ayril", description="Bot kanaldan ayrılır")
 async def ayril(interaction: discord.Interaction):
     if interaction.guild.voice_client:
         await interaction.guild.voice_client.disconnect()
@@ -79,5 +83,9 @@ async def ayril(interaction: discord.Interaction):
     else:
         await interaction.response.send_message("Zaten bir kanalda değilim.")
 
-# BURAYA DİKKAT: Tırnakların arasına kendi Token'ını yapıştır!
-bot.run('BURAYA_DISCORD_TOKENINI_YAPISTIR')
+# --- 5. BOTU ÇALIŞTIR (GÜVENLİ YÖNTEM) ---
+token = os.getenv('DISCORD_TOKEN')
+if token:
+    bot.run(token)
+else:
+    print("❌ HATA: DISCORD_TOKEN bulunamadı! Railway Variables kısmına ekle.")
