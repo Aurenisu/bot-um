@@ -86,4 +86,8 @@ async def ayril(interaction: discord.Interaction):
     else:
         await interaction.response.send_message("Zaten bir kanalda değilim.")
 
-bot.run('SENİN_BURAYA_TOKENINI_YAPISTIR')
+token = os.getenv('DISCORD_TOKEN')
+if token is None:
+    print("HATA: Token bulunamadı! Railway Variables kısmını kontrol et.")
+else:
+    bot.run(token)
