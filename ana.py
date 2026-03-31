@@ -2,6 +2,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 import os, yt_dlp, asyncio, json, random
+from datetime import datetime
 
 # --- 1. AYARLAR ---
 intents = discord.Intents.default()
@@ -11,7 +12,7 @@ intents.voice_states = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 DATA_FILE = "data.json"
-# BOM OYUNU İÇİN DEĞİŞKENLER
+LOG_KANAL_ID = 123456789012345678 # BURAYA LOGLARIN GİDECEĞİ KANALIN ID'SİNİ YAZ!
 bom_sayi = 1
 son_kisi = None
 
@@ -28,63 +29,89 @@ def veri_kaydet(data):
 @bot.event
 async def on_ready():
     await bot.tree.sync()
-    print(f"✅ BOM VE EĞLENCE BOTU AKTİF: {bot.user}")
+    print(f"✅ MEGA BOT + LOG SİSTEMİ AKTİF: {bot.user}")
 
-# --- 2. BOM OYUNU VE MESAJ PUAN SİSTEMİ ---
+# --- 2. LOG SİSTEMİ (SİLİNEN VE DÜZENLENEN MESAJLAR) ---
+
+@bot.event
+async def on_message_delete(message):
+    if message.author.bot: return
+    channel = bot.get_channel(LOG_KANAL_ID)
+    if not channel: return
+
+    embed = discord.Embed(title="🗑️ Mesaj Silindi", color=discord.Color.red(), timestamp=datetime.now())
+    embed.add_field(name="Kullanıcı:", value=message.author.mention, inline=True)
+    embed.add_field(name="Kanal:", value=message.channel.mention, inline=True)
+    embed.add_field(name="Silinen Mesaj:", value=message.content or "Mesaj içeriği okunamadı (Görsel olabilir)", inline=False)
+    embed.set_footer(text=f"Kullanıcı ID: {message.author.id}")
+    
+    await channel.send(embed=embed)
+
+@bot.event
+async def on_message_edit(before, after):
+    if before.author.bot or before.content == after.content: return
+    channel = bot.get_channel(LOG_KANAL_ID)
+    if not channel: return
+
+    embed = discord.Embed(title="📝 Mesaj Düzenlendi", color=discord.Color.orange(), timestamp=datetime.now())
+    embed.add_field(name="Kullanıcı:", value=before.author.mention, inline=True)
+    embed.add_field(name="Kanal:", value=before.channel.mention, inline=True)
+    embed.add_field(name="Eski Mesaj:", value=before.content, inline=False)
+    embed.add_field(name="Yeni Mesaj:", value=after.content, inline=False)
+    
+    await channel.send(embed=embed)
+
+# --- 3. BOM OYUNU VE PUAN SİSTEMİ ---
 @bot.event
 async def on_message(message):
     global bom_sayi, son_kisi
     if message.author.bot: return
 
-    # BOM OYUNU KONTROLÜ (Sadece belirli bir kanalda olmasını istersen kanal ID ekleyebilirsin)
-    # Örnek: if message.channel.id == 123456...
-    content = message.content.strip()
-    
-    if content.isdigit():
-        sayi = int(content)
-        data = veri_yukle()
-        uid = str(message.author.id)
-        if uid not in data["kullanicilar"]: data["kullanicilar"][uid] = {"isim": message.author.name, "puan": 0}
+    content = message.content.strip().lower()
+    data = veri_yukle()
+    uid = str(message.author.id)
+    if uid not in data["kullanicilar"]: data["kullanicilar"][uid] = {"isim": message.author.name, "puan": 0}
 
-        # Doğru sayı mı?
-        if sayi == bom_sayi:
+    is_digit = content.isdigit()
+    is_bom_word = (content == "bom")
+
+    if is_digit or is_bom_word:
+        success = False
+        is_bom_turn = (bom_sayi % 5 == 0)
+
+        if is_bom_turn and is_bom_word: success = True
+        elif not is_bom_turn and is_digit and int(content) == bom_sayi: success = True
+
+        if success:
             if message.author.id == son_kisi:
                 await message.add_reaction("❌")
-                await message.channel.send(f"⚠️ {message.author.mention}, üst üste iki sayı yazamazsın! Oyun sıfırlandı.")
                 bom_sayi = 1
                 son_kisi = None
+                await message.channel.send(f"⚠️ {message.author.mention} üst üste yazamazsın! Reset.")
             else:
                 await message.add_reaction("✅")
                 bom_sayi += 1
                 son_kisi = message.author.id
-                data["kullanicilar"][uid]["puan"] += 2 # Her doğru sayıya 2 puan
+                data["kullanicilar"][uid]["puan"] += 5
                 veri_kaydet(data)
         else:
-            # Yanlış sayı yazılırsa
             await message.add_reaction("💀")
-            await message.channel.send(f"❌ {message.author.mention} oyunu bozdu! Beklenen sayı: **{bom_sayi}**. Oyun 1'den tekrar başlıyor. (50 Puan Kaybettin)")
-            data["kullanicilar"][uid]["puan"] -= 50
+            beklenen = "BOM" if is_bom_turn else str(bom_sayi)
+            await message.channel.send(f"❌ {message.author.mention} yandı! Beklenen: **{beklenen}**")
+            data["kullanicilar"][uid]["puan"] = max(0, data["kullanicilar"][uid]["puan"] - 50)
             bom_sayi = 1
             son_kisi = None
             veri_kaydet(data)
 
-    # Normal mesaj puanı
     elif not message.content.startswith("/"):
-        data = veri_yukle()
-        uid = str(message.author.id)
-        if uid not in data["kullanicilar"]: data["kullanicilar"][uid] = {"isim": message.author.name, "puan": 0}
-        data["kullanicilar"][uid]["puan"] += 5
+        data["kullanicilar"][uid]["puan"] += 2
         veri_kaydet(data)
 
     await bot.process_commands(message)
 
-# --- 3. YENİ OYUN KOMUTLARI ---
+# --- 4. KOMUTLAR (ÖZETLENDİ) ---
 
-@bot.tree.command(name="bom_durum", description="Bom oyununda kaçıncı sayıda kalındığını gösterir")
-async def bom_durum(interaction: discord.Interaction):
-    await interaction.response.send_message(f"🔢 Şu anki hedef sayı: **{bom_sayi}**")
-
-@bot.tree.command(name="kayit", description="Kullanıcıyı etiketle ve kayıt et")
+@bot.tree.command(name="kayit", description="Kullanıcıyı kayıt et")
 @app_commands.checks.has_permissions(manage_nicknames=True)
 async def kayit(interaction: discord.Interaction, uye: discord.Member, isim: str, yas: int):
     data = veri_yukle()
@@ -94,30 +121,30 @@ async def kayit(interaction: discord.Interaction, uye: discord.Member, isim: str
     except: pass
     await interaction.response.send_message(f"✅ {uye.mention} kayıt edildi.")
 
-@bot.tree.command(name="puan", description="Puanını gösterir")
+@bot.tree.command(name="puan", description="Puanını göster")
 async def puan(interaction: discord.Interaction):
     data = veri_yukle()
     p = data["kullanicilar"].get(str(interaction.user.id), {}).get("puan", 0)
     await interaction.response.send_message(f"💰 Puanın: **{p}**")
 
-# --- MÜZİK KOMUTU (Basit Versiyon) ---
-@bot.tree.command(name="cal", description="Müzik çalar")
+@bot.tree.command(name="temizle", description="Mesaj siler")
+async def temizle(interaction: discord.Interaction, miktar: int):
+    await interaction.channel.purge(limit=miktar)
+    await interaction.response.send_message(f"🧹 {miktar} silindi.", ephemeral=True)
+
+# --- MÜZİK ---
+@bot.tree.command(name="cal", description="Müzik")
 async def cal(interaction: discord.Interaction, sarki: str):
     await interaction.response.defer()
     if not interaction.user.voice: return await interaction.followup.send("Sese gir!")
     if not interaction.guild.voice_client: await interaction.user.voice.channel.connect()
     
-    YDL_OPTS = {'format': 'bestaudio/best', 'noplaylist': True, 'cookiefile': 'cookies.txt'}
+    YDL_OPTS = {'format': 'bestaudio/best', 'noplaylist': True, 'cookiefile': 'cookies.txt', 'default_search': 'ytsearch'}
     with yt_dlp.YoutubeDL(YDL_OPTS) as ydl:
         info = ydl.extract_info(f"ytsearch1:{sarki}", download=False)['entries'][0]
         source = await discord.FFmpegOpusAudio.from_probe(info['url'], before_options='-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', options='-vn')
         if interaction.guild.voice_client.is_playing(): interaction.guild.voice_client.stop()
         interaction.guild.voice_client.play(source)
         await interaction.followup.send(f"🎵 Çalıyor: **{info['title']}**")
-
-# --- DİĞER EĞLENCE KOMUTLARI ---
-@bot.tree.command(name="ask_olcer", description="Aşk ölçer")
-async def ask(interaction: discord.Interaction, uye: discord.Member):
-    await interaction.response.send_message(f"❤️ {interaction.user.mention} ile {uye.mention} arasındaki aşk: **%{random.randint(0,100)}**")
 
 bot.run(os.getenv('DISCORD_TOKEN'))
