@@ -10,15 +10,15 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# --- 2. MÜZİK AYARLARI ---
+# --- 2. MÜZİK MOTORU AYARLARI ---
 YTDL_OPTIONS = {
     'format': 'bestaudio/best',
     'noplaylist': True,
     'quiet': True,
-    'cookiefile': 'cookies.txt',
     'no_warnings': True,
     'default_search': 'ytsearch',
     'nocheckcertificate': True,
+    'cookiefile': 'cookies.txt', # GitHub'da bu dosya mutlaka olmalı!
     'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
 }
 
@@ -31,11 +31,14 @@ ytdl = yt_dlp.YoutubeDL(YTDL_OPTIONS)
 
 @bot.event
 async def on_ready():
-    await bot.tree.sync()
-    print(f"✅ BOT HAZIR: {bot.user} (Python 3.13)")
+    try:
+        await bot.tree.sync()
+        print(f"✅ BOT ÇEVRİMİÇİ: {bot.user} (Python 3.11)")
+    except Exception as e:
+        print(f"Senkronizasyon hatası: {e}")
 
-# --- 3. KOMUTLAR ---
-@bot.tree.command(name="cal", description="Şarkı çalar")
+# --- 3. /cal KOMUTU ---
+@bot.tree.command(name="cal", description="İstediğin şarkıyı çalar")
 async def cal(interaction: discord.Interaction, sarki: str):
     await interaction.response.defer()
     
@@ -47,26 +50,41 @@ async def cal(interaction: discord.Interaction, sarki: str):
 
     try:
         loop = asyncio.get_event_loop()
-        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(f"ytsearch:{sarki}", download=False))
-        if 'entries' in data: data = data['entries'][0]
+        # "List index out of range" hatasını önlemek için kontrol eklendi
+        search_query = f"ytsearch1:{sarki}"
+        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(search_query, download=False))
         
-        source = await discord.FFmpegOpusAudio.from_probe(data['url'], **FFMPEG_OPTIONS)
+        if not data or 'entries' not in data or len(data['entries']) == 0:
+            return await interaction.followup.send("❌ Şarkı bulunamadı veya YouTube aramayı engelledi. Lütfen tekrar dene.")
+
+        entry = data['entries'][0]
+        url = entry['url']
+        title = entry.get('title', 'Bilinmeyen Şarkı')
+        
+        source = await discord.FFmpegOpusAudio.from_probe(url, **FFMPEG_OPTIONS)
         
         if interaction.guild.voice_client.is_playing():
             interaction.guild.voice_client.stop()
 
         interaction.guild.voice_client.play(source)
-        await interaction.followup.send(f"🎵 Çalıyor: **{data['title']}**")
+        await interaction.followup.send(f"🎵 Şu an çalıyor: **{title}**")
+        
     except Exception as e:
-        await interaction.followup.send(f"❌ Hata: {e}")
+        print(f"Oynatma Hatası: {e}")
+        await interaction.followup.send(f"❌ Bir hata oluştu: {str(e)[:100]}...")
 
-@bot.tree.command(name="ayril", description="Bot kanaldan çıkar")
+# --- 4. /ayril KOMUTU ---
+@bot.tree.command(name="ayril", description="Botu kanaldan çıkarır")
 async def ayril(interaction: discord.Interaction):
     if interaction.guild.voice_client:
         await interaction.guild.voice_client.disconnect()
         await interaction.response.send_message("👋 Görüşürüz!")
+    else:
+        await interaction.response.send_message("Zaten bir kanalda değilim.")
 
-# --- 4. ÇALIŞTIR ---
-# Railway Variables kısmına DISCORD_TOKEN eklemeyi unutma!
+# --- 5. ÇALIŞTIRMA ---
 token = os.getenv('DISCORD_TOKEN')
-bot.run(token)
+if token:
+    bot.run(token)
+else:
+    print("❌ HATA: DISCORD_TOKEN bulunamadı!")
