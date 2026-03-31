@@ -10,16 +10,24 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# 2. Müzik Motoru Ayarları
+# 2. Müzik Motoru Ayarları (Senin cookies.txt dosyanı kullanacak şekilde ayarlandı)
 YTDL_OPTIONS = {
     'format': 'bestaudio/best',
     'noplaylist': True,
     'quiet': True,
-    'cookiefile': 'cookies.txt',  # Burayı ekledik
+    'cookiefile': 'cookies.txt',  # Yüklediğin bilet burada devreye giriyor
     'no_warnings': True,
     'default_search': 'auto',
     'source_address': '0.0.0.0'
 }
+
+FFMPEG_OPTIONS = {
+    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+    'options': '-vn'
+}
+
+# ytdl tanımlamasını buraya sabitledik
+ytdl = yt_dlp.YoutubeDL(YTDL_OPTIONS)
 
 @bot.event
 async def on_ready():
@@ -30,7 +38,7 @@ async def on_ready():
         print(f"Senkronizasyon hatası: {e}")
     print(f"Bot {bot.user} olarak aktif, artik /cal kullanabilirsin!")
 
-# 3. /cal Komutu (Yenilenmiş ve Hataları Giderilmiş)
+# 3. /cal Komutu
 @bot.tree.command(name="cal", description="İstediğin şarkıyı çalar")
 @app_commands.describe(sarki="Şarkı adı veya link")
 async def cal(interaction: discord.Interaction, sarki: str):
@@ -50,7 +58,7 @@ async def cal(interaction: discord.Interaction, sarki: str):
     # Şarkıyı arama ve oynatma
     try:
         loop = asyncio.get_event_loop()
-        # BURASI KRİTİK: ytsearch ekledik ki link yazmasan da bulsun
+        # Arama terimi (ytsearch) burada ekleniyor
         data = await loop.run_in_executor(None, lambda: ytdl.extract_info(f"ytsearch:{sarki}", download=False))
         
         if 'entries' in data:
