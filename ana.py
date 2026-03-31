@@ -9,7 +9,7 @@ intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 DATA_FILE = "data.json"
-LOG_KANAL_ID = 123456789012345678 # <--- BURAYA KENDİ LOG KANALININ ID'SİNİ YAZ!
+LOG_KANAL_ID = 123456789012345678 # <--- KENDİ LOG KANALININ ID'SİNİ YAZ!
 bom_sayi = 1
 son_kisi = None
 
@@ -25,13 +25,8 @@ def veri_kaydet(data):
 
 @bot.event
 async def on_ready():
-    # TÜM KOMUTLARI ZORLA SENKRONİZE ET
-    try:
-        synced = await bot.tree.sync()
-        print(f"✅ {len(synced)} ADET KOMUT SENKRONİZE EDİLDİ!")
-    except Exception as e:
-        print(f"❌ Senkronizasyon Hatası: {e}")
-    print(f"🚀 Bot Hazır: {bot.user}")
+    await bot.tree.sync()
+    print(f"✅ SİSTEM TAMAM: {bot.user} | BOM Komutu ve Tüm Sistemler Aktif!")
 
 # --- 2. LOG SİSTEMİ ---
 @bot.event
@@ -41,7 +36,7 @@ async def on_message_delete(message):
     if channel:
         embed = discord.Embed(title="🗑️ Mesaj Silindi", color=discord.Color.red(), timestamp=datetime.now())
         embed.add_field(name="Kullanıcı:", value=message.author.mention)
-        embed.add_field(name="Mesaj:", value=message.content or "İçerik boş", inline=False)
+        embed.add_field(name="Mesaj:", value=message.content or "Boş", inline=False)
         await channel.send(embed=embed)
 
 @bot.event
@@ -55,7 +50,7 @@ async def on_message_edit(before, after):
         embed.add_field(name="Yeni:", value=after.content, inline=False)
         await channel.send(embed=embed)
 
-# --- 3. BOM VE PUAN (ON_MESSAGE) ---
+# --- 3. BOM OYUNU MANTIĞI (ON_MESSAGE) ---
 @bot.event
 async def on_message(message):
     global bom_sayi, son_kisi
@@ -66,7 +61,6 @@ async def on_message(message):
     uid = str(message.author.id)
     if uid not in data["kullanicilar"]: data["kullanicilar"][uid] = {"isim": message.author.name, "puan": 0}
 
-    # BOM OYUNU MANTIĞI
     if content == "bom" or content.isdigit():
         is_bom_turn = (bom_sayi % 5 == 0)
         success = (is_bom_turn and content == "bom") or (not is_bom_turn and content.isdigit() and int(content) == bom_sayi)
@@ -75,7 +69,7 @@ async def on_message(message):
             if message.author.id == son_kisi:
                 await message.add_reaction("❌")
                 bom_sayi, son_kisi = 1, None
-                await message.channel.send("⚠️ Üst üste yazdın! Oyun sıfırlandı.")
+                await message.channel.send("⚠️ Sırayı bozdun! Oyun 1'den başlıyor.")
             else:
                 await message.add_reaction("✅")
                 bom_sayi += 1
@@ -85,7 +79,7 @@ async def on_message(message):
         else:
             await message.add_reaction("💀")
             beklenen = "BOM" if is_bom_turn else str(bom_sayi)
-            await message.channel.send(f"❌ Yanlış! Beklenen: **{beklenen}**")
+            await message.channel.send(f"❌ Yandın! Beklenen: **{beklenen}**. Oyun sıfırlandı.")
             data["kullanicilar"][uid]["puan"] = max(0, data["kullanicilar"][uid]["puan"] - 50)
             bom_sayi, son_kisi = 1, None
             veri_kaydet(data)
@@ -95,7 +89,15 @@ async def on_message(message):
 
     await bot.process_commands(message)
 
-# --- 4. TÜM SLASH KOMUTLARI (EKSİKSİZ) ---
+# --- 4. TÜM KOMUTLAR (BOM DAHİL) ---
+
+@bot.tree.command(name="bom", description="BOM oyununun durumunu ve kurallarını gösterir")
+async def bom_durum(interaction: discord.Interaction):
+    global bom_sayi
+    embed = discord.Embed(title="🔢 BOM Oyunu Durumu", color=discord.Color.blue())
+    embed.add_field(name="Sıradaki Sayı:", value=f"**{bom_sayi}**", inline=False)
+    embed.add_field(name="Kural:", value="5 ve 5'in katlarında (5, 10, 15...) sayı yerine **bom** yazmalısın!", inline=False)
+    await interaction.response.send_message(embed=embed)
 
 @bot.tree.command(name="puan", description="Puanını gösterir")
 async def puan(interaction: discord.Interaction):
@@ -122,15 +124,6 @@ async def siralam(interaction: discord.Interaction):
 @bot.tree.command(name="ask_olcer", description="Aşk ölçer")
 async def ask(interaction: discord.Interaction, uye: discord.Member):
     await interaction.response.send_message(f"❤️ {interaction.user.mention} x {uye.mention} Aşk: %{random.randint(0,100)}")
-
-@bot.tree.command(name="dc", description="Doğruluk mu Cesaretlik mi?")
-async def dc(interaction: discord.Interaction):
-    soru = random.choice(["D: En sevdiğin renk?", "C: Komik bir ses çıkar!", "D: Hiç birinden gizlice hoşlandın mı?"])
-    await interaction.response.send_message(f"🎲 {soru}")
-
-@bot.tree.command(name="8ball", description="Sihirli 8-Ball")
-async def eightball(interaction: discord.Interaction, soru: str):
-    await interaction.response.send_message(f"🔮 **Soru:** {soru}\n**Cevap:** {random.choice(['Evet', 'Hayır', 'Belki', 'Kesinlikle!'])}")
 
 @bot.tree.command(name="yazi_tura", description="Yazı mı tura mı?")
 async def yazi_tura(interaction: discord.Interaction):
