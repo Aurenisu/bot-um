@@ -28,7 +28,7 @@ ytdl = yt_dlp.YoutubeDL(YTDL_OPTIONS)
 
 @bot.event
 async def on_ready():
-    print(f'Bot {bot.user} olarak giriş yaptı ve müzik çalmaya hazır!')
+    print(f'Bot Lolibot olarak giriş yaptı ve müzik çalmaya hazır!')
 
 @bot.command()
 async def katil(ctx):
