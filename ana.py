@@ -15,13 +15,16 @@ son_kisi = None
 
 # YouTube Ayarları (Müzik için en stabil ayarlar)
 YDL_OPTIONS = {
-    'cookiefile': 'cookies.txt',
     'format': 'bestaudio/best',
     'noplaylist': True,
     'quiet': True,
     'no_warnings': True,
     'default_search': 'ytsearch',
     'source_address': '0.0.0.0',
+    'nocheckcertificate': True,
+    'ignoreerrors': False,
+    'logtostderr': False,
+    'addheader': [('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36')]
 }
 
 FFMPEG_OPTIONS = {
