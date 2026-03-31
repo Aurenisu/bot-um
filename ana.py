@@ -18,9 +18,14 @@ YTDL_OPTIONS = {
     'no_warnings': True,
     'default_search': 'ytsearch',
     'nocheckcertificate': True,
-    'cookiefile': 'cookies.txt', # GitHub'da bu dosya mutlaka olmalı!
-    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-}
+    'cookiefile': 'cookies.txt', 
+    # Burası önemli: YouTube'un bot olduğunu anlamaması için 'kimlik' ekliyoruz
+    'http_headers': {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-us,en;q=0.5',
+        'Sec-Fetch-Mode': 'navigate',
+    }
 
 FFMPEG_OPTIONS = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
