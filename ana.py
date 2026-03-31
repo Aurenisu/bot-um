@@ -4,12 +4,12 @@ import os
 import yt_dlp
 import asyncio
 
-# Botun yetkilerini (duyularını) açıyoruz
+# Botun yetkilerini açıyoruz
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Müzik indirme ve oynatma ayarları
+# Müzik ayarları
 YTDL_OPTIONS = {
     'format': 'bestaudio/best',
     'noplaylist': True,
@@ -37,15 +37,17 @@ async def katil(ctx):
         await channel.connect()
         await ctx.send("Geldim! Ne çalıyoruz?")
     else:
-        await ctx.send("Önce bir ses kanalına girmen lazım kardeşim!")
+        await ctx.send("Önce bir ses kanalına girmen lazım!")
 
 @bot.command()
 async def cal(ctx, *, search):
     if not ctx.voice_client:
-        await ctx.invoke(katil)
+        if ctx.author.voice:
+            await ctx.author.voice.channel.connect()
+        else:
+            return await ctx.send("Önce bir ses kanalına girmelisin!")
     
     async with ctx.typing():
-        # YouTube'da arama yapıyoruz
         info = ytdl.extract_info(f"ytsearch:{search}", download=False)['entries'][0]
         url = info['url']
         source = await discord.FFmpegOpusAudio.from_probe(url, **FFMPEG_OPTIONS)
@@ -63,12 +65,6 @@ async def dur(ctx):
 async def ayril(ctx):
     if ctx.voice_client:
         await ctx.voice_client.disconnect()
-        await ctx.send("Görüşürüz, ben kaçtım! 👋")
-
-# Railway'deki Token'ı çekiyoruz
-bot.run(os.getenv('DISCORD_TOKEN')):
-    if ctx.voice_client:
-        await ctx.voice_client.disconnect()
-        await ctx.send("Görüşürüz, ben kaçtım! 👋")
+        await ctx.send("Görüşürüz! 👋")
 
 bot.run(os.getenv('DISCORD_TOKEN'))
